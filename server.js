@@ -53,6 +53,7 @@ let reconnectDelay = 5000;
 const RECONNECT_MAX = 60000;
 let aisActivityTimer = null;
 const AIS_ACTIVITY_TIMEOUT = 30000; // Force reconnect if no data for 30s
+let aisDown = false;
 
 const browserClients = new Set();
 
@@ -70,6 +71,8 @@ function resetAisActivityTimer(ws) {
   aisActivityTimer = setTimeout(() => {
     console.log('[ais] No data for ' + (AIS_ACTIVITY_TIMEOUT / 1000) + 's — connection is dead, forcing reconnect');
     aisActivityTimer = null;
+    aisDown = true;
+    broadcast(JSON.stringify({ _status: 'ais_down' }));
     if (ws && ws.readyState !== WebSocket.CLOSED) {
       ws.terminate();
     }
@@ -91,14 +94,27 @@ function connectToAIS() {
 
   console.log('[ais] Connecting to AISstream...');
   aisReady = false;
+  broadcast(JSON.stringify({ _status: 'connecting' }));
 
   const ws = new WebSocket(AIS_URL);
   aisSocket = ws;
 
+  // Timeout if the handshake takes too long
+  const connectTimeout = setTimeout(() => {
+    if (ws.readyState !== WebSocket.OPEN) {
+      console.log('[ais] Connection timed out after 15s — retrying');
+      aisDown = true;
+      broadcast(JSON.stringify({ _status: 'ais_down' }));
+      ws.terminate();
+    }
+  }, 15000);
+
   ws.on('open', () => {
+    clearTimeout(connectTimeout);
     console.log('[ais] Connected — sending subscription');
     reconnectDelay = 5000;
     aisReady = true;
+    aisDown = false;
     ws.send(JSON.stringify(buildSubscription()));
     broadcast(JSON.stringify({ _status: 'connected' }));
     resetAisActivityTimer(ws);
@@ -129,6 +145,7 @@ function connectToAIS() {
   });
 
   ws.on('close', () => {
+    clearTimeout(connectTimeout);
     console.log('[ais] Disconnected — reconnecting in', reconnectDelay / 1000, 's');
     if (aisActivityTimer) { clearTimeout(aisActivityTimer); aisActivityTimer = null; }
     aisReady = false;
@@ -138,6 +155,8 @@ function connectToAIS() {
 
   ws.on('error', (err) => {
     console.error('[ais] Error:', err.message);
+    aisDown = true;
+    broadcast(JSON.stringify({ _status: 'ais_down' }));
   });
 }
 
@@ -179,6 +198,8 @@ wss.on('connection', (client) => {
     client.send(JSON.stringify({ _status: 'connected' }));
   } else if (!apiKey) {
     client.send(JSON.stringify({ _status: 'need_key' }));
+  } else if (aisDown) {
+    client.send(JSON.stringify({ _status: 'ais_down' }));
   } else {
     client.send(JSON.stringify({ _status: 'connecting' }));
   }

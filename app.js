@@ -114,6 +114,18 @@ function hexToRgba(hex, alpha) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
+// ── Dead reckoning ──
+const KNOTS_TO_DEG_PER_MS = 1.852 / (3600 * 1000 * 111320); // rough: 1 knot in deg-lat per ms
+
+function extrapolatePosition(lat, lon, cogDeg, sogKnots, elapsedMs) {
+  if (!sogKnots || sogKnots < 0.2) return { lat, lon }; // stationary
+  const cogRad = cogDeg * Math.PI / 180;
+  const distDeg = sogKnots * KNOTS_TO_DEG_PER_MS * elapsedMs;
+  const dLat = distDeg * Math.cos(cogRad);
+  const dLon = distDeg * Math.sin(cogRad) / Math.cos(lat * Math.PI / 180);
+  return { lat: lat + dLat, lon: lon + dLon };
+}
+
 // ── Ship Tracker ──
 class ShipTracker {
   constructor() {
@@ -143,6 +155,7 @@ class ShipTracker {
 
     this.startCleanupLoop();
     this.startStatsLoop();
+    this.startInterpolationLoop();
   }
 
   // ── Map setup ──
@@ -287,6 +300,8 @@ class ShipTracker {
           } else if (data._status === 'need_key') {
             this.setStatus('disconnected', 'Need API key');
             this.showApiKeyModal();
+          } else if (data._status === 'ais_down') {
+            this.setStatus('disconnected', 'AISstream.io is down');
           } else if (data._status === 'connecting') {
             this.setStatus('connecting', 'Connecting to AIS...');
           }
@@ -403,8 +418,10 @@ class ShipTracker {
   handlePositionReport(ship, report) {
     if (!report) return;
 
-    ship.lat = report.Latitude;
-    ship.lon = report.Longitude;
+    // Store the confirmed AIS position as the dead-reckoning anchor
+    ship.anchorLat = report.Latitude;
+    ship.anchorLon = report.Longitude;
+    ship.anchorTime = Date.now();
     ship.cog = report.Cog;
     ship.speed = report.Sog;
     ship.navStatus = report.NavigationalStatus;
@@ -412,6 +429,10 @@ class ShipTracker {
     if (report.TrueHeading !== undefined && report.TrueHeading !== 511) {
       ship.heading = report.TrueHeading;
     }
+
+    // Set display position (interpolation loop will take over from here)
+    ship.lat = report.Latitude;
+    ship.lon = report.Longitude;
 
     this.updateMarker(ship);
   }
@@ -598,6 +619,35 @@ class ShipTracker {
     } else {
       marker.closeTooltip();
     }
+  }
+
+  // ── Dead-reckoning interpolation ──
+  startInterpolationLoop() {
+    const tick = () => {
+      const now = Date.now();
+      this.ships.forEach((ship) => {
+        if (ship.anchorLat === undefined || !ship.speed || ship.speed < 0.2) return;
+
+        const elapsed = now - ship.anchorTime;
+        // Don't extrapolate beyond 2 minutes — data is too stale
+        if (elapsed > 120000) return;
+
+        const cog = (ship.heading !== null && ship.heading !== undefined && ship.heading !== 511)
+          ? ship.heading : ship.cog;
+        if (cog === null || cog === undefined) return;
+
+        const pos = extrapolatePosition(ship.anchorLat, ship.anchorLon, cog, ship.speed, elapsed);
+        ship.lat = pos.lat;
+        ship.lon = pos.lon;
+
+        const marker = this.markers.get(ship.mmsi);
+        if (marker) {
+          marker.setLatLng([pos.lat, pos.lon]);
+        }
+      });
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
   }
 
   // ── Stale ship cleanup ──
