@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SF Bay Ship Tracker</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚓</text></svg>">
+</head>
+<body>
+  <div id="map"></div>
+
+  <div id="info-panel">
+    <div id="info-title">SF BAY</div>
+    <div id="info-subtitle">SHIP TRACKER</div>
+    <div id="info-stats">
+      <div id="stat-vessels">
+        <span id="vessel-count">0</span> vessels
+      </div>
+      <div id="stat-status">
+        <span id="status-dot"></span>
+        <span id="status-text">Disconnected</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="legend">
+    <div class="legend-item"><span class="legend-dot" style="background:#4CAF50"></span>Cargo</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#F44336"></span>Tanker</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#2196F3"></span>Passenger</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#FF9800"></span>Tug / Pilot</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#8BC34A"></span>Fishing</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#E91E63"></span>Sailing</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#9C27B0"></span>Military</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#00BCD4"></span>High Speed</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#78909C"></span>Other</div>
+  </div>
+
+  <button id="theme-toggle" title="Switch map style">
+    <span id="theme-icon"></span>
+    <span id="theme-name"></span>
+  </button>
+
+  <div id="api-key-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h2>Ship Tracker Setup</h2>
+      <p>Enter your <a href="https://aisstream.io" target="_blank">AISstream.io</a> API key to start tracking vessels.</p>
+      <p class="modal-hint">It's free — just sign up and copy your key.</p>
+      <input type="text" id="api-key-input" placeholder="Your API key" spellcheck="false" autocomplete="off" />
+      <button id="api-key-submit">Start Tracking</button>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,405 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0a0a0a;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #e0e0e0;
+}
+
+/* ── Map ── */
+#map {
+  width: 100%;
+  height: 100%;
+}
+
+/* Remove Leaflet default attribution clutter for TV display */
+.leaflet-control-attribution {
+  display: none;
+}
+
+/* ── Ship icon (remove Leaflet default background) ── */
+.ship-icon {
+  background: none !important;
+  border: none !important;
+}
+
+.ship-marker-inner {
+  transition: transform 0.3s ease;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 4px var(--glow, transparent));
+}
+
+.ship-marker-moored {
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.4));
+}
+
+/* Pulse on fresh update */
+@keyframes shipPulse {
+  0% { filter: drop-shadow(0 0 2px rgba(0,0,0,0.5)) drop-shadow(0 0 4px var(--glow, transparent)) brightness(1); }
+  50% { filter: drop-shadow(0 0 2px rgba(0,0,0,0.5)) drop-shadow(0 0 8px var(--glow, transparent)) brightness(1.6); }
+  100% { filter: drop-shadow(0 0 2px rgba(0,0,0,0.5)) drop-shadow(0 0 4px var(--glow, transparent)) brightness(1); }
+}
+
+.ship-updated .ship-marker-inner {
+  animation: shipPulse 0.6s ease-out;
+}
+
+/* ── Ship name labels ── */
+.ship-label {
+  background: rgba(0, 0, 0, 0.7) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 3px !important;
+  color: #ccc !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  padding: 1px 5px !important;
+  white-space: nowrap !important;
+  box-shadow: none !important;
+}
+
+.ship-label::before {
+  display: none !important;
+}
+
+/* ── Info Panel (top-right) ── */
+#info-panel {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  background: rgba(10, 10, 10, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 18px 24px;
+  min-width: 180px;
+}
+
+#info-title {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: #fff;
+  line-height: 1;
+}
+
+#info-subtitle {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 6px;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 14px;
+}
+
+#info-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#stat-vessels {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+#vessel-count {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+}
+
+#stat-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+#status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #F44336;
+  transition: background 0.3s;
+}
+
+#status-dot.connected {
+  background: #4CAF50;
+  box-shadow: 0 0 6px rgba(76, 175, 80, 0.6);
+}
+
+#status-dot.connecting {
+  background: #FF9800;
+  animation: pulse 1.2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ── Legend (bottom-left) ── */
+#legend {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  z-index: 1000;
+  background: rgba(10, 10, 10, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Leaflet Popup (dark theme) ── */
+.leaflet-popup-content-wrapper {
+  background: rgba(15, 15, 15, 0.95) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 10px !important;
+  color: #e0e0e0 !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+}
+
+.leaflet-popup-tip {
+  background: rgba(15, 15, 15, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: none !important;
+}
+
+.leaflet-popup-content {
+  margin: 14px 16px !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+}
+
+.leaflet-popup-close-button {
+  color: rgba(255, 255, 255, 0.4) !important;
+  font-size: 20px !important;
+}
+
+.leaflet-popup-close-button:hover {
+  color: #fff !important;
+}
+
+.popup-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.popup-type {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.popup-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.popup-row:last-child {
+  border-bottom: none;
+}
+
+.popup-label {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.popup-value {
+  color: #fff;
+  font-weight: 500;
+}
+
+/* ── API Key Modal ── */
+.modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2000;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay.hidden {
+  display: none;
+}
+
+.modal-content {
+  background: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 36px 40px;
+  max-width: 420px;
+  width: 90%;
+  text-align: center;
+}
+
+.modal-content h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 12px;
+}
+
+.modal-content p {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.modal-content a {
+  color: #64B5F6;
+  text-decoration: none;
+}
+
+.modal-content a:hover {
+  text-decoration: underline;
+}
+
+.modal-hint {
+  font-size: 12px !important;
+  color: rgba(255, 255, 255, 0.35) !important;
+  margin-bottom: 20px !important;
+}
+
+#api-key-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 15px;
+  font-family: monospace;
+  outline: none;
+  margin-bottom: 16px;
+  transition: border-color 0.2s;
+}
+
+#api-key-input:focus {
+  border-color: rgba(100, 181, 246, 0.5);
+}
+
+#api-key-submit {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: #2196F3;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#api-key-submit:hover {
+  background: #1976D2;
+}
+
+/* ── Theme toggle ── */
+#theme-toggle {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: rgba(10, 10, 10, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+  user-select: none;
+}
+
+#theme-toggle:hover {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(10, 10, 10, 0.95);
+}
+
+#theme-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+#theme-name {
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+/* ── Settings gear (change API key) ── */
+#settings-btn {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(10, 10, 10, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, background 0.2s;
+}
+
+#settings-btn:hover {
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(10, 10, 10, 0.9);
+}
