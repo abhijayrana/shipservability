@@ -11,7 +11,7 @@ jobs:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
       - uses: google-github-actions/setup-gcloud@v2
       - run: |
-          gcloud compute ssh shipservability \
+          gcloud compute ssh arana@shipservability \
             --zone=us-west1-b \
             --project=shipservability \
             --command="cd /home/arana/shipservability && git pull && npm install --omit=dev && sudo systemctl restart shipservability" \
