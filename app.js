@@ -1,6 +1,6 @@
 // ── Configuration ──
 const CONFIG = {
-  WS_URL: `ws://${location.host}/ws`,
+  WS_URL: `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/ws`,
   // SF Bay bounding box: Golden Gate approaches → San Pablo Bay, Pacific → East Bay
   BOUNDS: [[37.2, -123.1], [38.2, -121.8]],
   MAP_CENTER: [37.81, -122.40],
